@@ -135,6 +135,27 @@
   .where p.tip{font-size:.72rem;margin-top:.6rem}
   .where p.tip code{background:#f4f4f5;border:1px solid var(--line);padding:.05rem .3rem;border-radius:.3rem;font-size:.68rem;color:#3f3f46}
 
+  /* ---------- tutorial steps ---------- */
+  .tut-lede{color:var(--muted);font-size:.9rem;margin:-.4rem 0 1.1rem;max-width:48rem}
+  .steps{display:flex;flex-direction:column;gap:.9rem}
+  .step{display:grid;grid-template-columns:2.3rem 1fr;gap:.95rem;border:1px solid var(--line);border-radius:.85rem;background:#fff;padding:1.05rem 1.15rem}
+  @media(max-width:34rem){.step{grid-template-columns:1.9rem 1fr;gap:.7rem;padding:.9rem}}
+  .stepnum{width:2.3rem;height:2.3rem;border-radius:999px;background:var(--accent);color:#fff;font-weight:700;font-size:.95rem;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  @media(max-width:34rem){.stepnum{width:1.9rem;height:1.9rem;font-size:.82rem}}
+  .stepbody h3{font-size:.95rem;font-weight:700;letter-spacing:-.01em}
+  .stepbody p{font-size:.85rem;color:var(--muted);margin-top:.35rem}
+  .stepbody p b{color:var(--ink)}
+  .stepbody pre.dark{margin-top:.7rem}
+  .grid2{display:grid;gap:.75rem;margin-top:.7rem}
+  @media(min-width:48rem){.grid2{grid-template-columns:1fr 1fr}}
+  pre.out{background:#fafafa;color:#3f3f46;border:1px dashed var(--line);border-radius:.6rem;padding:.8rem 1rem;font-size:.72rem;line-height:1.65;overflow:auto;font-family:var(--mono);margin-top:.7rem;white-space:pre-wrap}
+  .callout{margin-top:.75rem;border:1px solid #fde68a;background:#fffbeb;border-radius:.6rem;padding:.65rem .85rem;font-size:.78rem;color:#92400e}
+  .callout b{font-weight:700}
+  .callout code{background:#fef3c7;border:1px solid #fde68a;padding:.05rem .3rem;border-radius:.3rem;font-size:.68rem;color:#78350f}
+  .okline{margin-top:.65rem;font-size:.78rem;font-weight:600;color:#047857}
+  kbd{font-family:var(--mono);font-size:.72rem;background:#f4f4f5;border:1px solid var(--line);border-bottom-width:2px;border-radius:.35rem;padding:.05rem .35rem;color:#27272a}
+  pre.tree{background:#fafafa;color:#3f3f46;border:1px dashed var(--line);border-radius:.6rem;padding:.8rem 1rem;font-size:.7rem;line-height:1.55;overflow:auto;font-family:var(--mono);margin-top:.7rem}
+
   /* ---------- compare ---------- */
   .grid3c{display:grid;gap:1rem}
   @media(min-width:40rem){.grid3c{grid-template-columns:repeat(3,1fr)}}
@@ -173,6 +194,7 @@
     </p>
     <div class="cta">
       <a class="btn primary" href="#demo">▶ Try the simulator</a>
+      <a class="btn" href="#tutorial">📖 Step-by-step tutorial</a>
       <a class="btn" href="https://github.com/Farazjz/opencode-groupchat" target="_blank" rel="noopener">★ Star on GitHub</a>
       <a class="btn" href="https://raw.githubusercontent.com/Farazjz/opencode-groupchat/main/README.md" target="_blank" rel="noopener">📄 README</a>
     </div>
@@ -306,6 +328,144 @@ opencode   # that's it</code></pre>
     </div>
   </section>
 
+  <!-- ============ TUTORIAL ============ -->
+  <section id="tutorial" aria-label="Step-by-step tutorial">
+    <h2><span class="ico">📖</span> Run it — step by step</h2>
+    <p class="tut-lede">From zero to your first multi-agent group chat in about five minutes. Everything happens in the project you want the agents to work on; macOS/Linux and Windows commands are both shown.</p>
+    <div class="steps">
+
+      <div class="step">
+        <div class="stepnum">1</div>
+        <div class="stepbody">
+          <h3>Install OpenCode &amp; connect a model</h3>
+          <p>One-time setup. The personas are regular OpenCode agents, so they need a reachable model.</p>
+          <div class="grid2">
+            <pre class="dark scrollbar-thin"><code># macOS · Linux · WSL
+curl -fsSL https://opencode.ai/install | bash
+# or: npm i -g opencode-ai
+# or: brew install sst/tap/opencode</code></pre>
+            <pre class="dark scrollbar-thin"><code># Windows (PowerShell) — needs Node.js ≥ 18
+npm i -g opencode-ai</code></pre>
+          </div>
+          <p>Then connect any provider once and confirm the install:</p>
+          <pre class="dark scrollbar-thin"><code>opencode auth login   # pick a provider (Anthropic, OpenAI, …) and sign in
+opencode --version</code></pre>
+          <p class="okline">✓ Done when <code>opencode --version</code> prints a version.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="stepnum">2</div>
+        <div class="stepbody">
+          <h3>Drop the plugin into your project</h3>
+          <p>Run this in the <b>project root</b> — the folder the agents will work on. OpenCode loads every plugin it finds under <code>.opencode/plugins/</code>, no build step needed.</p>
+          <div class="grid2">
+            <pre class="dark scrollbar-thin"><code># macOS · Linux · WSL
+cd my-project
+git clone https://github.com/Farazjz/opencode-groupchat.git
+mkdir -p .opencode/plugins
+cp -r opencode-groupchat .opencode/plugins/group-chat</code></pre>
+            <pre class="dark scrollbar-thin"><code># Windows (PowerShell)
+cd my-project
+git clone https://github.com/Farazjz/opencode-groupchat.git
+New-Item -ItemType Directory -Force `
+  -Path ".opencode\plugins" | Out-Null
+Copy-Item -Recurse -Force `
+  ".\opencode-groupchat" `
+  ".\.opencode\plugins\group-chat"</code></pre>
+          </div>
+          <p>Your project should now contain:</p>
+          <pre class="tree scrollbar-thin"><code>my-project/
+└─ .opencode/
+   └─ plugins/
+      └─ group-chat/
+         ├─ package.json      ← tells OpenCode how to load it
+         ├─ README.md
+         └─ src/
+            └─ index.ts       ← the whole plugin</code></pre>
+          <p class="callout"><b>Tip — install once for all projects?</b> Copy the folder to <code>%USERPROFILE%\.config\opencode\plugins\group-chat</code> (Windows) or <code>~/.config/opencode/plugins/group-chat</code> (macOS/Linux) instead.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="stepnum">3</div>
+        <div class="stepbody">
+          <h3>Start OpenCode and verify the plugin loaded</h3>
+          <p>From the same project root:</p>
+          <pre class="dark scrollbar-thin"><code>opencode</code></pre>
+          <p>Two ways to confirm it is alive:</p>
+          <p>1. Type <kbd>/</kbd> in the input — <code>group</code> appears in the command list.<br />2. The startup log prints the persona agents registering:</p>
+          <pre class="out scrollbar-thin">[group-chat] persona agents ready: architect, implementer, reviewer, tester</pre>
+          <p class="callout"><b>Troubleshooting:</b> no <code>/group</code>? The plugin didn't load — check that <code>.opencode/plugins/group-chat/package.json</code> exists (it must not be nested one level deeper, like <code>group-chat/opencode-groupchat/</code>) and restart <code>opencode</code>. Seeing <code>Agent not found: "architect"</code>? You have an old <b>v0.1.0</b> copy — re-download; v0.1.1+ registers the agents at startup.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="stepnum">4</div>
+        <div class="stepbody">
+          <h3>Open your first room</h3>
+          <p>Type the <code>/group</code> command with a real goal — the same kind of thing you'd ask OpenCode directly:</p>
+          <pre class="dark scrollbar-thin"><code>/group start add rate limiting to the API</code></pre>
+          <p>You'll see the room open and the first persona take the floor:</p>
+          <pre class="out scrollbar-thin">[GROUP CHAT] Room started — "add rate limiting to the API".
+Members: Architect, Implementer, Reviewer, Tester.
+They will take turns until the goal is DONE or 16 turns pass. You can interject any time.
+
+Architect:  Plan: 1) token-bucket middleware… [NEXT: implementer]</pre>
+          <p class="okline">✓ The room is now live on this session — turns advance automatically.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="stepnum">5</div>
+        <div class="stepbody">
+          <h3>Watch and steer the group</h3>
+          <p>Each persona does <b>real tool work</b> on its turn — edits files, runs commands — then hands the floor on with <code>[NEXT: member]</code>. You stay in control:</p>
+          <p>→ <b>Interject any time:</b> just type — your message goes to the member holding the floor, e.g. <i>“focus on the login endpoint first”</i>.<br />
+             → <b>Check state:</b> <code>/group status</code> — roster, turns used, current speaker.<br />
+             → <b>Change the cast:</b> <code>/group add tester</code> or <code>/group remove tester</code> (any registered persona id).</p>
+          <pre class="dark scrollbar-thin"><code>/group status</code></pre>
+          <pre class="out scrollbar-thin">[GROUP CHAT] Room "add rate limiting to the API" — active
+Turns: 3/16 · Speaker: Implementer
+Members: Architect, Implementer, Reviewer, Tester</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="stepnum">6</div>
+        <div class="stepbody">
+          <h3>Close the room and read the transcript</h3>
+          <p>The group ends itself when a message ends with <code>DONE</code> (or after <code>maxTurns</code>). You can close early at any moment:</p>
+          <pre class="dark scrollbar-thin"><code>/group stop</code></pre>
+          <p>Closing restores your previous agent (e.g. <code>build</code>) so you keep working normally. Every room is written to disk — dump or find it here:</p>
+          <pre class="dark scrollbar-thin"><code>/group transcript</code></pre>
+          <pre class="out scrollbar-thin">[GROUP CHAT] Transcript (6 turns) saved to
+  my-project/.opencode/group-chat/ses_5f3a….md</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="stepnum">7</div>
+        <div class="stepbody">
+          <h3>Make it yours (optional)</h3>
+          <p>Add your own personas, trim the roster, or bound the room length — all from <code>opencode.json</code>:</p>
+          <pre class="dark scrollbar-thin"><code>{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": { "opencode-group-chat": { "options": {
+    "maxTurns": 12,
+    "roster": ["architect", "implementer", "tester"],
+    "personas": [{ "id": "security", "name": "Security",
+      "color": "#dc2626",
+      "description": "security engineer who audits for vulnerabilities",
+      "system": "You are Security… end turns with [NEXT: member] or DONE." }]
+  }}}}</code></pre>
+          <p class="callout"><b>After a restart</b> rooms restore <i>inactive</i> on purpose — run <code>/group resume</code> to continue where the group left off.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
   <!-- ============ USAGE ============ -->
   <section aria-label="Commands">
     <h2><span class="ico">⌨</span> Commands</h2>
@@ -340,7 +500,7 @@ opencode   # that's it</code></pre>
 <footer>
   <div class="wrap foot">
     <p>Built on public APIs from <a href="https://github.com/anomalyco/opencode" target="_blank" rel="noopener">anomalyco/opencode</a> (dev branch) — no forks, no patches.</p>
-    <p><a href="https://github.com/Farazjz/opencode-groupchat" target="_blank" rel="noopener">GitHub</a> · <span style="font-family:var(--mono);font-size:.72rem">MIT · opencode-group-chat v0.1.0</span></p>
+    <p><a href="https://github.com/Farazjz/opencode-groupchat" target="_blank" rel="noopener">GitHub</a> · <span style="font-family:var(--mono);font-size:.72rem">MIT · opencode-group-chat v0.1.1</span></p>
   </div>
 </footer>
 

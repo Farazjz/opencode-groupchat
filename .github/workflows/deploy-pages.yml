@@ -21,25 +21,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build static site
-        run: bun run build:pages
-        env:
-          NEXT_PAGES_BUILD: "1"
-          NEXT_PUBLIC_BASE_PATH: /opencode-groupchat
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: out
+          path: docs
 
   deploy:
     needs: build
