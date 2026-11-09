@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>opencode-group-chat — Multi-agent group chat rooms for OpenCode</title>
+<meta name="description" content="A Hermes-style group chat plugin for OpenCode V2: several AI personas take turns on one shared project, hand the floor to each other, and call DONE when the goal is met. Windows, macOS & Linux." />
+<meta property="og:title" content="opencode-group-chat — Group chat for OpenCode" />
+<meta property="og:description" content="Hermes-style multi-agent group chat rooms for OpenCode V2. Works on Windows, macOS and Linux." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://farazjz.github.io/opencode-groupchat/" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23d97706'/%3E%3Cpath d='M8 10h11a3 3 0 0 1 3 3v3a3 3 0 0 1-3 3h-4l-4 4v-4h-3a3 3 0 0 1-3-3v-3a3 3 0 0 1 3-3z' fill='white'/%3E%3Ccircle cx='24' cy='9' r='4' fill='%23059669'/%3E%3C/svg%3E" />
+<style>
+  :root{
+    --bg:#fafafa; --card:#ffffff; --ink:#18181b; --muted:#52525b; --faint:#a1a1aa;
+    --line:#e4e4e7; --accent:#d97706; --accent-soft:#fffbeb;
+    --architect:#d97706; --implementer:#059669; --reviewer:#e11d48; --tester:#7c3aed;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;min-height:100vh}
+  .wrap{max-width:64rem;margin:0 auto;padding:0 1.25rem;width:100%}
+  main{flex:1;padding-top:3.5rem;padding-bottom:2.5rem}
+  a{color:inherit}
+  code,pre{font-family:var(--mono)}
+  .scrollbar-thin::-webkit-scrollbar{width:8px;height:8px}
+  .scrollbar-thin::-webkit-scrollbar-thumb{background:#d4d4d8;border-radius:8px}
+  .scrollbar-thin::-webkit-scrollbar-track{background:transparent}
+
+  /* ---------- hero ---------- */
+  .badges{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.1rem}
+  .badge{display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:600;padding:.28rem .7rem;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted)}
+  .badge.solid{background:#d1fae5;border-color:#a7f3d0;color:#065f46}
+  .badge a{text-decoration:none}
+  h1{font-size:clamp(1.9rem,4.5vw,2.75rem);font-weight:800;letter-spacing:-.02em;line-height:1.15}
+  .lede{margin-top:.9rem;max-width:46rem;color:var(--muted);font-size:1.02rem}
+  .lede code{background:#e4e4e7;padding:.05rem .35rem;border-radius:.3rem;font-size:.85em}
+  .lede strong{color:var(--ink)}
+  .cta{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1.4rem}
+  .btn{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem 1rem;border-radius:.55rem;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:.875rem;font-weight:600;text-decoration:none;transition:all .15s;cursor:pointer}
+  .btn:hover{border-color:#d4d4d8;background:#f4f4f5}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:#b45309;border-color:#b45309}
+
+  /* ---------- sections ---------- */
+  section{margin-bottom:3.5rem}
+  h2{display:flex;align-items:center;gap:.5rem;font-size:1.35rem;font-weight:700;letter-spacing:-.01em;margin-bottom:1rem}
+  h2 .ico{color:var(--accent)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:.9rem;overflow:hidden}
+  .card-head{padding:1.25rem 1.25rem .5rem}
+  .card-title{font-size:1.05rem;font-weight:700;display:flex;align-items:center;gap:.5rem}
+  .card-sub{color:var(--muted);font-size:.85rem;margin-top:.3rem}
+  .card-body{padding:1rem 1.25rem 1.25rem}
+
+  /* ---------- simulator ---------- */
+  .phase{font-size:.72rem;font-weight:700;padding:.3rem .7rem;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted)}
+  .phase.running{background:#ecfdf5;border-color:#a7f3d0;color:#047857}
+  .phase.closed{background:#f4f4f5;color:#52525b}
+  .controls{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem}
+  .topic{flex:1 1 260px;font-family:var(--mono);font-size:.85rem;padding:.55rem .75rem;border:1px solid var(--line);border-radius:.55rem;background:#fff;color:var(--ink)}
+  .topic:focus{outline:2px solid #fcd34d;border-color:#fcd34d}
+  .btn.small{padding:.5rem .85rem;font-size:.8rem}
+  .btn.stop{border-color:#fecdd3;color:#be123c}
+  .btn.stop:hover{background:#fff1f2;border-color:#fda4af}
+  .roster{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem}
+  .chip{display:inline-flex;align-items:center;gap:.45rem;padding:.3rem .8rem .3rem .35rem;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:.85rem;opacity:.6;transition:all .2s}
+  .chip.on{opacity:1;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .chip .dot{display:flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;border-radius:999px;color:#fff;font-size:.68rem;font-weight:700}
+  .chip .name{font-weight:600}
+  .chip .floor{font-size:.62rem;background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:999px;padding:0 .4rem;color:#52525b}
+  .dots{display:inline-flex;gap:3px;margin-left:.15rem}
+  .dots i{width:4px;height:4px;border-radius:999px;background:#a1a1aa;animation:bounce 1s infinite}
+  .dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
+  .scheduler{display:flex;align-items:center;gap:.5rem;margin-top:.9rem;padding:.55rem .8rem;border:1px dashed #d4d4d8;border-radius:.6rem;background:#fafafa;font-size:.75rem;color:var(--muted)}
+  .scheduler .k{font-weight:700}
+  .scheduler code{font-size:.72rem}
+  .transcript{margin-top:.9rem;height:24rem;overflow-y:auto;border:1px solid var(--line);border-radius:.7rem;background:#fff}
+  .t-inner{display:flex;flex-direction:column;gap:.75rem;padding:1rem;min-height:100%}
+  .t-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:.85rem;text-align:center;padding:2rem}
+  .msg{display:flex;gap:.7rem}
+  .msg .avatar{flex:none;width:1.75rem;height:1.75rem;border-radius:999px;color:#fff;font-size:.68rem;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:.1rem}
+  .msg .bubble{flex:1;min-width:0;border:1px solid var(--line);border-radius:.6rem;background:#fafafa;padding:.65rem .8rem}
+  .msg .meta{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;margin-bottom:.25rem}
+  .msg .who{font-size:.85rem;font-weight:700}
+  .msg .turn{font-size:.68rem;color:var(--faint)}
+  .msg p{font-size:.85rem;color:#3f3f46;white-space:pre-wrap}
+  .tag{font-size:.62rem;font-weight:700;padding:.05rem .45rem;border-radius:999px}
+  .tag.next{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+  .tag.done{background:#d1fae5;color:#065f46}
+  .closure{border:1px solid #a7f3d0;background:#ecfdf5;border-radius:.6rem;padding:.7rem .85rem;font-size:.85rem;color:#065f46}
+  .closure b{font-weight:700}
+  .closure code{font-size:.72rem}
+
+  /* ---------- table ---------- */
+  .tablewrap{border:1px solid var(--line);border-radius:.8rem;background:#fff;overflow:auto}
+  table{width:100%;min-width:40rem;border-collapse:collapse;font-size:.875rem}
+  thead tr{background:#fafafa;border-bottom:1px solid var(--line)}
+  th{padding:.7rem 1rem;text-align:left;font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#71717a}
+  td{padding:.7rem 1rem;border-bottom:1px solid var(--line);color:var(--muted);vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  td.first{font-weight:600;color:var(--ink)}
+  td code{background:#f4f4f5;border:1px solid var(--line);padding:.08rem .4rem;border-radius:.35rem;font-size:.72rem;color:#27272a;white-space:nowrap}
+
+  /* ---------- code blocks / tabs ---------- */
+  .tabs{display:flex;gap:.25rem;margin-bottom:.75rem;flex-wrap:wrap}
+  .tab{padding:.45rem .9rem;border-radius:.55rem;border:1px solid transparent;font-size:.8rem;font-weight:600;color:var(--muted);background:transparent;cursor:pointer}
+  .tab:hover{background:#f4f4f5}
+  .tab.active{background:#fff;border-color:var(--line);color:var(--ink)}
+  .codeblock{border-radius:.7rem;overflow:hidden;border:1px solid #27272a;background:#18181b}
+  .codehead{display:flex;align-items:center;justify-content:space-between;padding:.45rem .9rem;border-bottom:1px solid #27272a}
+  .codehead .file{font-family:var(--mono);font-size:.7rem;color:#a1a1aa}
+  .copybtn{display:inline-flex;align-items:center;gap:.3rem;font-size:.7rem;font-weight:600;color:#d4d4d8;background:transparent;border:0;cursor:pointer;padding:.25rem .5rem;border-radius:.4rem}
+  .copybtn:hover{background:#27272a;color:#fff}
+  .copybtn.ok{color:#34d399}
+  pre.code{max-height:24rem;overflow:auto;padding:1rem;font-size:.75rem;line-height:1.65;color:#e4e4e7}
+  .dl-row{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem}
+
+  /* ---------- install grid ---------- */
+  .grid3{display:grid;gap:1.25rem}
+  @media(min-width:56rem){.grid3{grid-template-columns:repeat(3,1fr)}}
+  .grid3 .card.win{border-color:#fde68a}
+  pre.dark{background:#18181b;color:#e4e4e7;border-radius:.6rem;padding:.9rem 1rem;font-size:.72rem;line-height:1.65;overflow:auto}
+  pre.dark code{color:#e4e4e7}
+  .note{font-size:.72rem;color:var(--faint);margin-top:.6rem}
+  .note code{background:#f4f4f5;border:1px solid var(--line);padding:.05rem .3rem;border-radius:.3rem;font-size:.68rem;color:#3f3f46}
+  .where{margin-top:1rem;border:1px solid var(--line);border-radius:.7rem;background:#fff;padding:1rem 1.15rem;font-size:.85rem;color:var(--muted)}
+  .where b{color:var(--ink)}
+  .where ul{list-style:none;margin:.5rem 0 0}
+  .where li{font-family:var(--mono);font-size:.72rem;margin-bottom:.3rem}
+  .where .lab{font-family:var(--sans);font-weight:600;color:var(--ink)}
+  .where .os{color:var(--faint);font-family:var(--sans)}
+  .where p.tip{font-size:.72rem;margin-top:.6rem}
+  .where p.tip code{background:#f4f4f5;border:1px solid var(--line);padding:.05rem .3rem;border-radius:.3rem;font-size:.68rem;color:#3f3f46}
+
+  /* ---------- compare ---------- */
+  .grid3c{display:grid;gap:1rem}
+  @media(min-width:40rem){.grid3c{grid-template-columns:repeat(3,1fr)}}
+  .mini{border:1px solid var(--line);border-radius:.8rem;background:#fff;padding:1rem 1.1rem}
+  .mini h3{font-size:.8rem;font-weight:700;margin-bottom:.4rem}
+  .mini p{font-size:.8rem;color:var(--muted)}
+  .mini.hl{border-color:#fde68a;background:#fffbeb}
+
+  /* ---------- footer ---------- */
+  footer{border-top:1px solid var(--line);background:#fff;margin-top:auto;padding-bottom:env(safe-area-inset-bottom)}
+  .foot{display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;justify-content:space-between;padding:1.5rem 0;color:var(--muted);font-size:.82rem}
+  .foot a{color:var(--ink);font-weight:600;text-decoration:none}
+  .foot a:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <header>
+    <div class="badges">
+      <span class="badge solid">✓ Yes — fully possible</span>
+      <span class="badge">OpenCode V2 · plugin API</span>
+      <span class="badge">Hermes-inspired</span>
+      <span class="badge">Windows · macOS · Linux</span>
+      <span class="badge"><a href="https://github.com/Farazjz/opencode-groupchat" target="_blank" rel="noopener">GitHub ↗</a></span>
+    </div>
+    <h1>A group-chat plugin for OpenCode</h1>
+    <p class="lede">
+      OpenCode (opencode.ai, the <code>anomalyco/opencode</code> agent) ships a powerful V2
+      plugin API with exactly the primitives a multi-agent group chat needs: persona agents,
+      slash commands, an event stream, session-level hooks and message injection. This is a
+      working plugin — <strong>opencode-group-chat</strong> — that adds Hermes-style rooms
+      where several agents take turns on one shared project, hand the floor to each other,
+      and call <code>DONE</code> when the goal is met.
+    </p>
+    <div class="cta">
+      <a class="btn primary" href="#demo">▶ Try the simulator</a>
+      <a class="btn" href="https://github.com/Farazjz/opencode-groupchat" target="_blank" rel="noopener">★ Star on GitHub</a>
+      <a class="btn" href="https://raw.githubusercontent.com/Farazjz/opencode-groupchat/main/README.md" target="_blank" rel="noopener">📄 README</a>
+    </div>
+  </header>
+
+  <!-- ============ DEMO ============ -->
+  <section id="demo" aria-label="Interactive demo">
+    <div class="card">
+      <div class="card-head" style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:.75rem">
+        <div>
+          <div class="card-title">💬 Try the turn-taking engine</div>
+          <p class="card-sub">A faithful simulation of what the plugin does inside a real OpenCode session: inject a turn prompt, the persona works, the scheduler reads its directives and hands the floor on.</p>
+        </div>
+        <span class="phase" id="phase">no room</span>
+      </div>
+      <div class="card-body">
+        <div class="controls">
+          <input id="topic" class="topic" value="add rate limiting to the API" aria-label="Group chat topic" />
+          <button id="btn-start" class="btn primary small">▶ /group start</button>
+          <button id="btn-step" class="btn small" hidden>◯ Next turn</button>
+          <button id="btn-auto" class="btn small" hidden>⚡ Pause</button>
+          <button id="btn-stop" class="btn small stop" hidden>■ Stop</button>
+          <button id="btn-reset" class="btn small" hidden>↺ Reset</button>
+        </div>
+        <div class="roster" id="roster" aria-label="Room members"></div>
+        <div class="scheduler" id="scheduler" hidden><span class="k">scheduler:</span><code id="rule"></code></div>
+        <div class="transcript scrollbar-thin" id="transcript"><div class="t-inner" id="t-inner"><div class="t-empty">No room yet — press <b>/group start</b> to open one.</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MAPPING ============ -->
+  <section aria-label="API mapping">
+    <h2><span class="ico">☑</span> Every group-chat need maps to a public plugin API</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Group-chat need</th><th>OpenCode plugin primitive</th><th>What the plugin does</th></tr></thead>
+        <tbody>
+          <tr><td class="first">Distinct participants</td><td><code>ctx.agent.transform</code></td><td>registers each persona as an agent (<code>update()</code> upserts new agents) with its own system prompt</td></tr>
+          <tr><td class="first">Open & manage rooms</td><td><code>ctx.command.transform</code></td><td>adds the /group slash command: start, stop, status, transcript, add, remove</td></tr>
+          <tr><td class="first">Capture what was said</td><td><code>ctx.event.subscribe()</code></td><td>session.step.started attributes messages; session.text.ended carries the full text</td></tr>
+          <tr><td class="first">Turn-taking engine</td><td><code>ctx.session.hook("experimental.idle")</code></td><td>runs when the session has no pending input — admits the next turn in the same execution</td></tr>
+          <tr><td class="first">Give the floor</td><td><code>ctx.session.switchAgent(...)</code></td><td>re-points the session at the next persona before its turn</td></tr>
+          <tr><td class="first">Prompt the next turn</td><td><code>ctx.session.synthetic(...)</code></td><td>injects the turn prompt (room header, transcript tail, rules) with metadata tags</td></tr>
+          <tr><td class="first">Room persistence</td><td><code>ctx.storage</code></td><td>rooms + transcripts survive restarts; /group resume continues a restored room</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ SOURCE ============ -->
+  <section aria-label="Plugin source">
+    <h2><span class="ico">👥</span> The plugin — ready to drop in</h2>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="engine" role="tab">src/index.ts</button>
+      <button class="tab" data-tab="config" role="tab">opencode.json</button>
+      <button class="tab" data-tab="usage" role="tab">usage</button>
+    </div>
+    <div id="tab-engine" class="tabpane">
+      <div class="codeblock">
+        <div class="codehead"><span class="file">opencode-group-chat/src/index.ts</span><button class="copybtn" data-copy>⧉ Copy</button></div>
+        <pre class="code scrollbar-thin"><code id="code-engine"></code></pre>
+      </div>
+    </div>
+    <div id="tab-config" class="tabpane" hidden>
+      <div class="codeblock">
+        <div class="codehead"><span class="file">opencode.json</span><button class="copybtn" data-copy>⧉ Copy</button></div>
+        <pre class="code scrollbar-thin"><code id="code-config"></code></pre>
+      </div>
+    </div>
+    <div id="tab-usage" class="tabpane" hidden>
+      <div class="codeblock">
+        <div class="codehead"><span class="file">terminal — inside opencode</span><button class="copybtn" data-copy>⧉ Copy</button></div>
+        <pre class="code scrollbar-thin"><code id="code-usage"></code></pre>
+      </div>
+    </div>
+    <div class="dl-row">
+      <a class="btn small" href="https://raw.githubusercontent.com/Farazjz/opencode-groupchat/main/src/index.ts" target="_blank" rel="noopener">⬇ index.ts</a>
+      <a class="btn small" href="https://raw.githubusercontent.com/Farazjz/opencode-groupchat/main/package.json" target="_blank" rel="noopener">⬇ package.json</a>
+      <a class="btn small" href="https://raw.githubusercontent.com/Farazjz/opencode-groupchat/main/README.md" target="_blank" rel="noopener">⬇ README.md</a>
+      <a class="btn small" href="https://github.com/Farazjz/opencode-groupchat" target="_blank" rel="noopener">→ full repo</a>
+    </div>
+  </section>
+
+  <!-- ============ INSTALL ============ -->
+  <section aria-label="Install">
+    <h2><span class="ico">📦</span> Install — macOS, Linux & Windows</h2>
+    <div class="grid3">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Option A — macOS & Linux</div><p class="card-sub">Local plugin, no publishing needed; resolved from your project.</p></div>
+        <div class="card-body">
+<pre class="dark scrollbar-thin"><code>mkdir -p .opencode/plugins
+cp -r opencode-group-chat \
+  .opencode/plugins/group-chat</code></pre>
+        </div>
+      </div>
+      <div class="card win">
+        <div class="card-head"><div class="card-title">🪟 Option B — Windows</div><p class="card-sub">Native PowerShell / CMD — no WSL required.</p></div>
+        <div class="card-body">
+<pre class="dark scrollbar-thin"><code># PowerShell, from your project root
+git clone https://github.com/Farazjz/opencode-groupchat.git
+
+New-Item -ItemType Directory -Force `
+  -Path ".opencode\plugins" | Out-Null
+Copy-Item -Recurse -Force `
+  ".\opencode-groupchat" `
+  ".\.opencode\plugins\group-chat"
+
+opencode   # that's it</code></pre>
+<p class="note">CMD equivalent: <code>xcopy /E /I /Y opencode-groupchat .opencode\plugins\group-chat</code></p>
+<p class="note">Install for <b>all</b> your projects: copy into <code>%USERPROFILE%\.config\opencode\plugins\group-chat</code> instead.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Option C — from npm</div><p class="card-sub">Publish once, then reference it in opencode.json.</p></div>
+        <div class="card-body">
+<pre class="dark scrollbar-thin"><code>npm i -g opencode-group-chat
+
+// opencode.json
+{ "plugin": ["opencode-group-chat"] }</code></pre>
+        </div>
+      </div>
+    </div>
+    <div class="where">
+      <b>Where plugins live (all platforms)</b>
+      <ul>
+        <li><span class="lab">This project only:</span> &lt;project&gt;\.opencode\plugins\group-chat</li>
+        <li><span class="lab">All your projects (global):</span> %USERPROFILE%\.config\opencode\plugins\group-chat <span class="os">(Windows)</span> · ~/.config/opencode/plugins/group-chat <span class="os">(macOS/Linux)</span></li>
+      </ul>
+      <p class="tip">💡 Running OpenCode inside <b>WSL</b>? Use the macOS/Linux steps and keep the plugin inside the WSL filesystem — WSL can't reliably load plugins from Windows paths like C:\… &nbsp;·&nbsp; 💡 Your terminal's current directory <i>is</i> the project: <code>.opencode\plugins</code> is always relative to where you launch <code>opencode</code>.</p>
+    </div>
+  </section>
+
+  <!-- ============ USAGE ============ -->
+  <section aria-label="Commands">
+    <h2><span class="ico">⌨</span> Commands</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Command</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td class="first"><code>/group start &lt;topic&gt;</code></td><td>Open a room on the current session</td></tr>
+          <tr><td class="first"><code>/group status</code></td><td>Roster, turns used, current speaker</td></tr>
+          <tr><td class="first"><code>/group transcript</code></td><td>Save/dump the conversation</td></tr>
+          <tr><td class="first"><code>/group add &lt;agent&gt;</code></td><td>Add a persona to the roster</td></tr>
+          <tr><td class="first"><code>/group remove &lt;agent&gt;</code></td><td>Drop a persona</td></tr>
+          <tr><td class="first"><code>/group resume</code></td><td>Continue a room restored after a restart</td></tr>
+          <tr><td class="first"><code>/group stop</code></td><td>Close the room and restore your previous agent</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ COMPARE ============ -->
+  <section aria-label="Comparison with Hermes">
+    <h2><span class="ico">⇄</span> How it compares to the Hermes agent</h2>
+    <div class="grid3c">
+      <div class="mini"><h3>Hermes rooms</h3><p>A gateway owns the room log and drives turns between bots, even across machines; Desktop renders the room.</p></div>
+      <div class="mini"><h3>This plugin</h3><p>One OpenCode session is the room: the plugin drives turns between persona agents, so they share full history and can edit the same files.</p></div>
+      <div class="mini hl"><h3>Shared idea</h3><p>Explicit hand-offs, a DONE marker, bounded turns, and a transcript you can inspect — the discipline that makes group chat converge.</p></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <p>Built on public APIs from <a href="https://github.com/anomalyco/opencode" target="_blank" rel="noopener">anomalyco/opencode</a> (dev branch) — no forks, no patches.</p>
+    <p><a href="https://github.com/Farazjz/opencode-groupchat" target="_blank" rel="noopener">GitHub</a> · <span style="font-family:var(--mono);font-size:.72rem">MIT · opencode-group-chat v0.1.0</span></p>
+  </div>
+</footer>
+
+<script>
+/* ================= data ================= */
+var PERSONAS = [
+  { id: "architect",   name: "Architect",   color: "#d97706" },
+  { id: "implementer", name: "Implementer", color: "#059669" },
+  { id: "reviewer",    name: "Reviewer",    color: "#e11d48" },
+  { id: "tester",      name: "Tester",      color: "#7c3aed" }
+];
+var SCRIPT = [
+  { speaker: "architect", directive: "handoff", to: "implementer", rule: "explicit hand-off [NEXT: implementer]",
+    text: "Plan for \u201crate limiting\u201d: 1) token-bucket middleware in src/middleware/rate-limit.ts keyed by API key, 2) config in rate-limit.config.ts, 3) 429 handler with Retry-After header. Implementer, please build the middleware." },
+  { speaker: "implementer", directive: "handoff", to: "reviewer", rule: "explicit hand-off [NEXT: reviewer]",
+    text: "Done \u2014 added src/middleware/rate-limit.ts with a token bucket (60 req/min, burst 10) wired into the router, plus rate-limit.config.ts. Reviewer, please check the TTL handling." },
+  { speaker: "reviewer", directive: "handoff", to: "implementer", rule: "explicit hand-off [NEXT: implementer]",
+    text: "Found one: the bucket TTL is never checked before refill, so expired keys get a free refill window. Also the Retry-After value should be integer seconds. Implementer, fix both." },
+  { speaker: "implementer", directive: "handoff", to: "tester", rule: "explicit hand-off [NEXT: tester]",
+    text: "Fixed \u2014 refill now clamps expired windows and Retry-After is Math.ceil on remaining seconds. Tester, please verify with the integration suite." },
+  { speaker: "tester", directive: "handoff", to: "reviewer", rule: "explicit hand-off [NEXT: reviewer]",
+    text: "Ran npm test -- rate-limit: 14 passed, 0 failed, including expired-key refill and 429 header cases. Reviewer, ready for final approval." },
+  { speaker: "reviewer", directive: "done", to: null, rule: "DONE detected \u2192 room closes, control restored",
+    text: "Approved \u2014 TTL clamp is correct, headers are per spec, tests cover the edge cases. The group\u2019s goal is reached." }
+];
+var CODE_ENGINE = [
+'// opencode-group-chat/src/index.ts (excerpt)',
+'import { Plugin } from "@opencode/plugin"',
+'import { Schema } from "effect"',
+'',
+'export default Plugin.define({',
+'  id: "opencode-group-chat",',
+'  setup: async (ctx) => {',
+'    // 1) Register persona agents (update() upserts brand-new agents)',
+'    await ctx.agent.transform((editor) => {',
+'      for (const p of personas) {',
+'        editor.update(p.id, (a) => {',
+'          a.name = p.name',
+'          a.description = p.description',
+'          a.system = p.system',
+'          a.color = p.color',
+'          a.mode = "all"           // usable as primary AND subagent',
+'        })',
+'      }',
+'    })',
+'',
+'    // 2) The /group slash command: start | stop | status | transcript | ...',
+'    await ctx.command.transform((commands) => {',
+'      commands.add({',
+'        name: "group",',
+'        description: "Multi-agent group chat: /group start <topic> ...",',
+'        execute: async ({ sessionID, prompt }) => { /* open/close rooms */ },',
+'      })',
+'    })',
+'',
+'    // 3) Capture what each persona says from the event stream',
+'    for await (const event of ctx.event.subscribe()) {',
+'      // session.step.started  \u2192 who is speaking (data.agent)',
+'      // session.text.ended    \u2192 what was said (data.text)',
+'    }',
+'',
+'    // 4) The engine: when the session goes idle, schedule the next speaker',
+'    await ctx.session.hook("experimental.idle", async (event) => {',
+'      const room = rooms.get(event.sessionID)',
+'      if (!room?.active) return',
+'      if (event.background.length > 0) return   // wait for shells/subagents',
+'',
+'      const next = pickNext(room, last)         // DONE | [NEXT: x] | round-robin',
+'      if (!next) return closeRoom(room)',
+'',
+'      await ctx.session.switchAgent({ sessionID: room.sessionID, agent: next })',
+'      await ctx.session.synthetic({             // inject the turn prompt',
+'        sessionID: room.sessionID,',
+'        text: turnPrompt(room, next),',
+'        metadata: { groupChat: { turn: room.turn, speaker: next } },',
+'      })',
+'    })',
+'  },',
+'})'
+].join("\n");
+var CODE_CONFIG = [
+'// opencode.json \u2014 install + configure',
+'{',
+'  "$schema": "https://opencode.ai/config.json",',
+'  "plugin": ["opencode-group-chat"],',
+'  // optional tuning:',
+'  // "plugin": { "opencode-group-chat": { "options": {',
+'  //   "maxTurns": 16,',
+'  //   "roster": ["architect", "implementer", "reviewer", "tester"],',
+'  //   "personas": [ { "id": "security", "name": "Security", ... } ]',
+'  // }}}',
+'}'
+].join("\n");
+var CODE_USAGE = [
+'# in an OpenCode session',
+'/group start add rate limiting to the API',
+'# \u2026 the group takes turns; interject any time by typing',
+'/group status          # roster, turns, current speaker',
+'/group transcript      # dump conversation (saved to .opencode/group-chat/)',
+'/group stop            # close room, restore your previous agent'
+].join("\n");
+
+/* ================= simulator ================= */
+var $ = function (id) { return document.getElementById(id); };
+var phase = "idle", messages = [], auto = true, timer = null, typing = null;
+
+function persona(id) {
+  for (var i = 0; i < PERSONAS.length; i++) if (PERSONAS[i].id === id) return PERSONAS[i];
+  return PERSONAS[0];
+}
+function setPhase(p) {
+  phase = p;
+  var el = $("phase");
+  el.className = "phase" + (p === "running" ? " running" : p === "closed" ? " closed" : "");
+  el.textContent = p === "running" ? "room active" : p === "closed" ? "room closed" : "no room";
+  $("btn-start").hidden = p !== "idle";
+  $("btn-step").hidden = p !== "running";
+  $("btn-auto").hidden = p !== "running";
+  $("btn-stop").hidden = p !== "running";
+  $("btn-reset").hidden = p !== "closed";
+  $("topic").disabled = p === "running";
+  $("btn-auto").textContent = auto ? "\u26a1 Pause" : "\u26a1 Auto";
+}
+function renderRoster(floor, isTyping) {
+  var el = $("roster");
+  el.innerHTML = "";
+  PERSONAS.forEach(function (p) {
+    var on = floor === p.id && phase === "running";
+    var chip = document.createElement("span");
+    chip.className = "chip" + (on ? " on" : "");
+    chip.style.background = on ? p.color + "14" : "#fff";
+    var dot = document.createElement("span");
+    dot.className = "dot"; dot.style.background = p.color; dot.textContent = p.name.charAt(0);
+    var name = document.createElement("span");
+    name.className = "name"; name.style.color = p.color; name.textContent = p.name;
+    chip.appendChild(dot); chip.appendChild(name);
+    if (isTyping === p.id) {
+      var d = document.createElement("span"); d.className = "dots";
+      d.innerHTML = "<i></i><i></i><i></i>"; chip.appendChild(d);
+    }
+    if (on) {
+      var f = document.createElement("span"); f.className = "floor"; f.textContent = "on the floor";
+      chip.appendChild(f);
+    }
+    el.appendChild(chip);
+  });
+}
+function msgNode(m) {
+  var p = persona(m.speaker);
+  var row = document.createElement("div"); row.className = "msg";
+  var av = document.createElement("span"); av.className = "avatar"; av.style.background = p.color; av.textContent = p.name.charAt(0);
+  var bubble = document.createElement("div"); bubble.className = "bubble";
+  var meta = document.createElement("div"); meta.className = "meta";
+  var who = document.createElement("span"); who.className = "who"; who.style.color = p.color; who.textContent = p.name;
+  var turn = document.createElement("span"); turn.className = "turn"; turn.textContent = "turn " + m.n + "/16";
+  meta.appendChild(who); meta.appendChild(turn);
+  if (m.directive === "handoff") {
+    var t1 = document.createElement("span"); t1.className = "tag next"; t1.textContent = "[NEXT: " + m.to + "]";
+    meta.appendChild(t1);
+  }
+  if (m.directive === "done") {
+    var t2 = document.createElement("span"); t2.className = "tag done"; t2.textContent = "DONE";
+    meta.appendChild(t2);
+  }
+  var body = document.createElement("p"); body.textContent = m.text;
+  bubble.appendChild(meta); bubble.appendChild(body);
+  row.appendChild(av); row.appendChild(bubble);
+  return row;
+}
+function render() {
+  var inner = $("t-inner");
+  inner.innerHTML = "";
+  if (messages.length === 0 && phase === "idle") {
+    var e = document.createElement("div"); e.className = "t-empty";
+    e.innerHTML = "No room yet \u2014 press <b>/group start</b> to open one.";
+    inner.appendChild(e);
+  }
+  messages.forEach(function (m) { inner.appendChild(msgNode(m)); });
+  if (phase === "closed") {
+    var c = document.createElement("div"); c.className = "closure";
+    var topic = $("topic").value || "untitled topic";
+    c.innerHTML = "<b>[GROUP CHAT]</b> Room \u201c" + topic.replace(/</g, "&lt;") +
+      "\u201d closed \u2014 the group agreed the goal is done (DONE). Turns used: " + messages.length +
+      "/16. Control restored to build. Transcript saved to <code>.opencode/group-chat/&lt;sessionID&gt;.md</code>.";
+    inner.appendChild(c);
+  }
+  var box = $("transcript");
+  box.scrollTop = box.scrollHeight;
+}
+function schedule() {
+  clearTimeout(timer);
+  if (phase !== "running" || !auto || typing === null) return;
+  timer = setTimeout(step, 1700);
+}
+function step() {
+  if (phase !== "running" || messages.length >= SCRIPT.length) return;
+  var next = SCRIPT[messages.length];
+  var m = { n: messages.length + 1, speaker: next.speaker, text: next.text, directive: next.directive, to: next.to };
+  messages.push(m);
+  typing = null;
+  if (next.directive === "done") {
+    auto = false;
+    setPhase("closed");
+    renderRoster(null, null);
+    $("scheduler").hidden = false; $("rule").textContent = next.rule;
+  } else {
+    typing = next.to || next.speaker;
+    renderRoster(typing, typing);
+    $("scheduler").hidden = false; $("rule").textContent = next.rule;
+  }
+  render();
+  schedule();
+}
+function start() {
+  clearTimeout(timer);
+  messages = []; auto = true; typing = "architect";
+  setPhase("running");
+  renderRoster("architect", typing);
+  $("scheduler").hidden = false; $("rule").textContent = "room opened \u2014 round-robin starts the roster";
+  render();
+  schedule();
+}
+function stop() {
+  clearTimeout(timer); typing = null; auto = false;
+  setPhase("closed");
+  renderRoster(null, null);
+  $("scheduler").hidden = false; $("rule").textContent = "room closed by user \u2014 control restored";
+  render();
+}
+function reset() {
+  clearTimeout(timer); typing = null; auto = true; messages = [];
+  setPhase("idle");
+  renderRoster(null, null);
+  $("scheduler").hidden = true;
+  render();
+}
+$("btn-start").addEventListener("click", start);
+$("btn-step").addEventListener("click", function () { clearTimeout(timer); step(); });
+$("btn-auto").addEventListener("click", function () { auto = !auto; setPhase(phase); schedule(); });
+$("btn-stop").addEventListener("click", stop);
+$("btn-reset").addEventListener("click", reset);
+setPhase("idle"); renderRoster(null, null);
+
+/* ================= tabs + copy ================= */
+document.querySelectorAll(".tab").forEach(function (tab) {
+  tab.addEventListener("click", function () {
+    document.querySelectorAll(".tab").forEach(function (t) { t.classList.remove("active"); });
+    tab.classList.add("active");
+    document.querySelectorAll(".tabpane").forEach(function (p) { p.hidden = true; });
+    $("tab-" + tab.dataset.tab).hidden = false;
+  });
+});
+$("code-engine").textContent = CODE_ENGINE;
+$("code-config").textContent = CODE_CONFIG;
+$("code-usage").textContent = CODE_USAGE;
+document.querySelectorAll("[data-copy]").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    var code = btn.closest(".codeblock").querySelector("code").textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(function () {
+        btn.classList.add("ok"); btn.textContent = "\u2713 Copied";
+        setTimeout(function () { btn.classList.remove("ok"); btn.textContent = "\u2349 Copy"; }, 1500);
+      });
+    }
+  });
+});
+</script>
+</body>
+</html>
